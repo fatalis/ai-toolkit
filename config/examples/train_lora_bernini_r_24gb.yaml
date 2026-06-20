@@ -1,0 +1,59 @@
+---
+job: extension
+config:
+  name: "my_first_bernini_r_lora_v1"
+  process:
+    - type: 'sd_trainer'
+      training_folder: "output"
+      device: cuda:0
+      network:
+        type: "lora"
+        linear: 32
+        linear_alpha: 32
+      save:
+        dtype: bf16
+        save_every: 250
+        max_step_saves_to_keep: 4
+      datasets:
+        - folder_path: "/path/to/target/videos"
+          control_path: "/path/to/source/videos"
+          caption_ext: "txt"
+          resolution: [512, 768]
+          num_frames: 81
+          fps: 16
+          shrink_video_to_frames: true
+          cache_latents_to_disk: true
+      train:
+        batch_size: 1
+        steps: 3000
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: "flowmatch"
+        optimizer: "adamw8bit"
+        lr: 0.0001
+        dtype: bf16
+        timestep_type: "linear"
+        switch_boundary_every: 1
+      model:
+        name_or_path: "ByteDance/Bernini-R-Diffusers"
+        arch: "bernini_r"
+        quantize: true
+        quantize_te: true
+        low_vram: true
+        model_kwargs:
+          train_high_noise: true
+          train_low_noise: true
+      sample:
+        sampler: "flowmatch"
+        sample_every: 250
+        width: 832
+        height: 480
+        num_frames: 81
+        fps: 16
+        prompts:
+          - "make this video cinematic --ctrl_img /path/to/source/videos/example.mp4"
+meta:
+  name: "[name]"
+  version: '1.0'

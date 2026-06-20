@@ -35,7 +35,7 @@ type AdditionalSections =
   | 'model.unconditional_lora_path'
   | 'ideogram_4_prompt';
 
-type ModelGroup = 'image' | 'instruction' | 'video' | 'experimental' | 'audio';
+type ModelGroup = 'image' | 'instruction' | 'video' | 'video instruction' | 'experimental' | 'audio';
 
 export type SampleTag = {
   title: string;
@@ -314,6 +314,41 @@ export const modelArchs: ModelArch[] = [
     accuracyRecoveryAdapters: {
       '4 bit with ARA': 'uint4|ostris/accuracy_recovery_adapters/wan22_14b_i2v_torchao_uint4.safetensors',
     },
+  },
+  {
+    name: 'bernini_r',
+    label: 'Bernini-R',
+    group: 'video instruction',
+    isVideoModel: true,
+    defaults: {
+      'config.process[0].model.name_or_path': ['ByteDance/Bernini-R-Diffusers', defaultNameOrPath],
+      'config.process[0].model.quantize': [true, false],
+      'config.process[0].model.quantize_te': [true, false],
+      'config.process[0].sample.sampler': ['flowmatch', 'flowmatch'],
+      'config.process[0].train.noise_scheduler': ['flowmatch', 'flowmatch'],
+      'config.process[0].sample.num_frames': [81, 1],
+      'config.process[0].sample.fps': [16, 1],
+      'config.process[0].model.low_vram': [true, false],
+      'config.process[0].train.timestep_type': ['linear', 'sigmoid'],
+      'config.process[0].model.model_kwargs': [
+        {
+          train_high_noise: true,
+          train_low_noise: true,
+        },
+        {},
+      ],
+      'config.process[0].datasets[x].fps': [16, undefined],
+    },
+    disableSections: ['network.conv'],
+    additionalSections: [
+      'datasets.control_path',
+      'sample.ctrl_img',
+      'datasets.num_frames',
+      'model.low_vram',
+      'model.multistage',
+      'model.layer_offloading',
+      'datasets.auto_frame_count',
+    ],
   },
   {
     name: 'wan22_5b',

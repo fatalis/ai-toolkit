@@ -47,6 +47,9 @@ AI Toolkit is an easy to use all in one training suite for diffusion models. I t
 - [Lightricks/LTX-2](https://huggingface.co/Lightricks/LTX-2) (LTX-2)
 - [Lightricks/LTX-2.3](https://huggingface.co/Lightricks/LTX-2.3) (LTX-2.3)
 
+### Video Instruction
+- [ByteDance/Bernini-R-Diffusers](https://huggingface.co/ByteDance/Bernini-R-Diffusers) (Bernini-R)
+
 ### Audio
 - [ACE-Step/Ace-Step1.5](https://huggingface.co/ACE-Step/Ace-Step1.5) (Ace Step 1.5)
 - [ACE-Step/acestep-v15-xl-base](https://huggingface.co/ACE-Step/acestep-v15-xl-base) (Ace Step 1.5 XL)

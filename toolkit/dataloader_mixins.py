@@ -67,6 +67,7 @@ transforms_dict = {
 }
 
 img_ext_list = ['.jpg', '.jpeg', '.png', '.webp']
+video_ext_list = ['.mp4', '.avi', '.mov', '.webm', '.mkv', '.wmv', '.m4v', '.flv']
 
 
 def standardize_images(images):
@@ -542,6 +543,7 @@ class ImageProcessingDTOMixin:
                     
             # Final safety check - ensure no frame exceeds max valid index
             frames_to_extract = [min(frame_idx, max_frame_index) for frame_idx in frames_to_extract]
+            self.video_frames_to_extract = frames_to_extract
             
             # Only log frames to extract if in debug mode
             if hasattr(self.dataset_config, 'debug') and self.dataset_config.debug:
@@ -702,6 +704,18 @@ class ImageProcessingDTOMixin:
             # Only log success in debug mode
             if hasattr(self.dataset_config, 'debug') and self.dataset_config.debug:
                 print_acc(f"Successfully loaded video with {len(frames)} frames: {self.path}")
+
+            if not only_load_latents:
+                if self.has_control_image:
+                    self.load_control_image()
+                if self.has_inpaint_image:
+                    self.load_inpaint_image()
+                if self.has_clip_image:
+                    self.load_clip_image()
+                if self.has_mask_image:
+                    self.load_mask_image()
+                if self.has_unconditional:
+                    self.load_unconditional_image()
         
         except Exception as e:
             # Print full traceback
@@ -978,8 +992,9 @@ class ControlFileItemDTOMixin:
             file_name_no_ext = os.path.splitext(os.path.basename(img_path))[0]
             
             found_control_images = []
+            extensions = video_ext_list if self.is_video else img_ext_list
             for control_path in control_path_list:
-                for ext in img_ext_list:
+                for ext in extensions:
                     if os.path.exists(os.path.join(control_path, file_name_no_ext + ext)):
                         found_control_images.append(os.path.join(control_path, file_name_no_ext + ext))
                         self.has_control_image = True
@@ -998,6 +1013,10 @@ class ControlFileItemDTOMixin:
             control_path_list = [self.control_path]
         
         for control_path in control_path_list:
+            if os.path.splitext(control_path)[1].lower() in video_ext_list:
+                control_tensors.append(self.load_control_video(control_path))
+                continue
+
             try:
                 img = Image.open(control_path)
                 img = exif_transpose(img)
@@ -1061,6 +1080,56 @@ class ControlFileItemDTOMixin:
             self.control_tensor_list = control_tensors
         else:
             self.control_tensor = torch.stack(control_tensors, dim=0)
+
+    def load_control_video(self: 'FileItemDTO', control_path: str):
+        if not self.dataset_config.buckets:
+            raise Exception("Control videos not supported for non-bucket datasets")
+
+        frames_to_extract = getattr(self, "video_frames_to_extract", None)
+        if frames_to_extract is None:
+            raise Exception("Target video must be loaded before loading a control video")
+
+        cap = cv2.VideoCapture(control_path)
+        if not cap.isOpened():
+            raise Exception(f"Failed to open control video file: {control_path}")
+
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        max_frame_index = total_frames - 1
+        frames = []
+        try:
+            for frame_idx in frames_to_extract:
+                frame_idx = min(frame_idx, max_frame_index)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                ret, frame = cap.read()
+                if not ret:
+                    raise Exception(f"Failed to read frame {frame_idx} from control video {control_path}")
+
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(frame).convert("RGB")
+
+                if self.flip_x:
+                    img = img.transpose(Image.FLIP_LEFT_RIGHT)
+                if self.flip_y:
+                    img = img.transpose(Image.FLIP_TOP_BOTTOM)
+
+                img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
+                img = img.crop((
+                    self.crop_x,
+                    self.crop_y,
+                    self.crop_x + self.crop_width,
+                    self.crop_y + self.crop_height,
+                ))
+
+                transform = transforms.Compose([transforms.ToTensor()])
+                if self.aug_replay_spatial_transforms:
+                    img = self.augment_spatial_control(img, transform=transform)
+                else:
+                    img = transform(img)
+                frames.append(img)
+        finally:
+            cap.release()
+
+        return torch.stack(frames)
 
     def cleanup_control(self: 'FileItemDTO'):
         self.control_tensor = None

@@ -79,7 +79,7 @@ export default function SimpleJob({
     return sections;
   }, [modelArch, jobType]);
 
-  const isVideoModel = !!(modelArch?.group === 'video');
+  const isVideoModel = !!modelArch?.isVideoModel;
   const isAudioModel = !!(modelArch?.group === 'audio');
 
   const taggedSampleArr: Record<string, any>[] | null = useMemo(() => {

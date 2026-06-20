@@ -57,8 +57,8 @@ const docs: { [key: string]: ConfigDoc } = {
     description: (
       <>
         The control dataset needs to have files that match the filenames of your training dataset. They should be
-        matching file pairs. These images are fed as control/input images during training. The control images will be
-        resized to match the training images.
+        matching file pairs. These files are fed as control/input media during training. Images are resized to match the
+        training images, and videos are sampled/cropped to match the target training videos.
       </>
     ),
   },
