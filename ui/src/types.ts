@@ -215,6 +215,7 @@ export interface SampleConfig {
   sampler: string;
   sample_every: number;
   sample_start_step: number;
+  loras?: Array<string | { path?: string | null; strength?: number }>;
   width: number;
   height: number;
   prompts?: string[];

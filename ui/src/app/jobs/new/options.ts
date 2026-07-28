@@ -65,6 +65,16 @@ export interface ModelArch {
 
 const defaultNameOrPath = '';
 const defaultLinearRank = 32;
+const defaultKreaSampleLoras = [
+  {
+    path: '/path/to/krea2_turbo_lora_rank_64_bf16.safetensors',
+    strength: 0.6,
+  },
+  {
+    path: '/path/to/Krea2_TextFusion_Refusal_Reduction.safetensors',
+    strength: 1,
+  },
+];
 
 export const modelArchs: ModelArch[] = [
   {
@@ -1081,6 +1091,9 @@ export const modelArchs: ModelArch[] = [
       'config.process[0].network.conv': [undefined, 16],
       'config.process[0].network.conv_alpha': [undefined, 16],
       'config.process[0].model.low_vram': [true, false],
+      'config.process[0].sample.loras': [defaultKreaSampleLoras, undefined],
+      'config.process[0].sample.guidance_scale': [1, 4],
+      'config.process[0].sample.sample_steps': [8, 30],
     },
     disableSections: [
       'network.conv',

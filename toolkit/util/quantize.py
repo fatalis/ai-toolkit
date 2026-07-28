@@ -401,7 +401,10 @@ def quantize_model(
                 if block_list is None:
                     break
             if block_list is not None:
-                all_blocks += list(block_list)
+                if isinstance(block_list, torch.nn.ModuleList):
+                    all_blocks += list(block_list)
+                else:
+                    all_blocks.append(block_list)
         base_model.print_and_status_update(
             f" - quantizing {len(all_blocks)} transformer blocks"
         )

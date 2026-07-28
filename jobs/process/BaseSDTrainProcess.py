@@ -46,6 +46,7 @@ from toolkit.progress_bar import ToolkitProgressBar
 from toolkit.prompt_utils import concat_prompt_embeds
 from toolkit.reference_adapter import ReferenceAdapter
 from toolkit.sampler import get_sampler
+from toolkit.sample_lora import load_sample_lora_from_path
 from toolkit.saving import save_t2i_from_diffusers, load_t2i_model, save_ip_adapter_from_diffusers, \
     load_ip_adapter_model, load_custom_adapter_model
 
@@ -119,6 +120,7 @@ class BaseSDTrainProcess(BaseTrainProcess):
 
         self.save_config = SaveConfig(**self.get_conf('save', {}))
         self.sample_config = SampleConfig(**self.get_conf('sample', {}))
+        self._sample_lora_networks = {}
         first_sample_config = self.get_conf('first_sample', None)
         if first_sample_config is not None:
             self.has_first_sample_requested = True
@@ -367,8 +369,33 @@ class BaseSDTrainProcess(BaseTrainProcess):
         if self.adapter is not None and isinstance(self.adapter, CustomAdapter):
             self.adapter.is_sampling = True
         
+        sample_loras = []
+        for lora_config in sample_config.loras:
+            lora_path = os.path.abspath(os.path.expanduser(lora_config['path']))
+            sample_lora = self._sample_lora_networks.get(lora_path)
+            if sample_lora is None:
+                print_acc(f"Loading sample LoRA from {lora_path}")
+                sample_lora = load_sample_lora_from_path(lora_path, self.sd)
+                self._sample_lora_networks[lora_path] = sample_lora
+            sample_lora.force_to(self.device_torch, dtype=self.sd.torch_dtype)
+            sample_lora.multiplier = lora_config['strength']
+            # torch_multiplier is intentionally not a buffer, so force_to() does
+            # not move it with the rest of the network.
+            sample_lora._update_torch_multiplier()
+            sample_loras.append(sample_lora)
+
         # send to be generated
-        self.sd.generate_images(gen_img_config_list, sampler=sample_config.sampler)
+        try:
+            for sample_lora in sample_loras:
+                sample_lora.is_active = True
+            self.sd.generate_images(
+                gen_img_config_list,
+                sampler=sample_config.sampler,
+            )
+        finally:
+            for sample_lora in sample_loras:
+                sample_lora.is_active = False
+                sample_lora.force_to('cpu', dtype=self.sd.torch_dtype)
 
         
         if self.adapter is not None and isinstance(self.adapter, CustomAdapter):

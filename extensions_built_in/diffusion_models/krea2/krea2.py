@@ -865,7 +865,7 @@ class Krea2Model(BaseModel):
         return "krea2"
 
     def get_transformer_block_names(self) -> Optional[List[str]]:
-        return ["blocks"]
+        return ["blocks", "txtfusion"]
 
     def convert_lora_weights_before_save(self, state_dict):
         return {

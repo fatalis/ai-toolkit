@@ -89,6 +89,27 @@ class SampleConfig:
         self.guidance_scale = kwargs.get('guidance_scale', 7)
         self.sample_steps = kwargs.get('sample_steps', 20)
         self.network_multiplier = kwargs.get('network_multiplier', 1)
+        self.loras: List[Dict[str, Union[str, float]]] = []
+        raw_loras = kwargs.get('loras', [])
+        if raw_loras is None:
+            raw_loras = []
+        if not isinstance(raw_loras, list):
+            raise ValueError("sample.loras must be a list")
+        for idx, raw_lora in enumerate(raw_loras):
+            if isinstance(raw_lora, str):
+                lora_path = raw_lora
+                lora_strength = 1.0
+            elif isinstance(raw_lora, dict):
+                lora_path = raw_lora.get('path', None)
+                try:
+                    lora_strength = float(raw_lora.get('strength', 1.0))
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(f"sample.loras[{idx}].strength must be a number") from exc
+            else:
+                raise ValueError(f"sample.loras[{idx}] must be a string or object")
+            if not isinstance(lora_path, str) or not lora_path.lower().endswith('.safetensors'):
+                raise ValueError(f"sample.loras[{idx}].path must point to a .safetensors file")
+            self.loras.append({'path': lora_path, 'strength': lora_strength})
         self.guidance_rescale = kwargs.get('guidance_rescale', 0.0)
         self.ext: ImgExt = kwargs.get('format', 'jpg')
         self.adapter_conditioning_scale = kwargs.get('adapter_conditioning_scale', 1.0)

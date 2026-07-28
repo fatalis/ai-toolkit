@@ -721,6 +721,13 @@ class ToolkitNetworkMixin:
                     if (src_h, src_w) == (tgt_h, tgt_w):
                         # shapes already match: keep original
                         pass
+                    
+                    elif src_h <= tgt_h and src_w <= tgt_w:
+                        print_once(f"Expanding {key} from {load_value.shape} to {blank_val.shape}")
+                        new_val = torch.zeros((tgt_h, tgt_w), device=load_value.device, dtype=load_value.dtype)
+                        new_val[:src_h, :src_w] = load_value
+                        load_sd[key] = new_val
+                        self.did_change_weights = True
 
                     elif "lora_down" in key and src_h < tgt_h:
                         print_once(f"Expanding {key} from {load_value.shape} to {blank_val.shape}")
@@ -740,8 +747,18 @@ class ToolkitNetworkMixin:
                         print_once(f"Shrinking {key} from {load_value.shape} to {blank_val.shape}")
                         load_sd[key] = load_value[:tgt_h, :tgt_w]
                         self.did_change_weights = True
+                    
+                    elif "lora_down" in key and src_w > tgt_w:
+                        print_once(f"Shrinking {key} from {load_value.shape} to {blank_val.shape}")
+                        load_sd[key] = load_value[:tgt_h, :tgt_w]
+                        self.did_change_weights = True
 
                     elif "lora_up" in key and src_w > tgt_w:
+                        print_once(f"Shrinking {key} from {load_value.shape} to {blank_val.shape}")
+                        load_sd[key] = load_value[:tgt_h, :tgt_w]
+                        self.did_change_weights = True
+                    
+                    elif "lora_up" in key and src_h > tgt_h:
                         print_once(f"Shrinking {key} from {load_value.shape} to {blank_val.shape}")
                         load_sd[key] = load_value[:tgt_h, :tgt_w]
                         self.did_change_weights = True
